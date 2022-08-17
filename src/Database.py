@@ -22,3 +22,8 @@ class Database:
         cur.execute("SELECT COUNT(*) FROM reviews")
         row = cur.fetchone()
         return row[0]
+
+    def find_unique_flight_from(self):
+        cur.execute("SELECT DISTINCT inbounddepartureairport FROM offers")
+        row = cur.fetchone()
+        return row

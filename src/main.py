@@ -27,7 +27,7 @@ def start_command(message):
                        reply_markup=markup_generator.generate_markup_from_word("List of airports", "departureairports"))
     bot.register_next_step_handler(msg, process_flight_from)
 
-
+# TODO: add a markup with list of airports and pagination
 def process_flight_from(message):
     flight_from = message.text.split(",")
     #print(database.find_unique_flight_from())
@@ -69,6 +69,7 @@ def process_start_date(message):
         bot.register_next_step_handler(msg, process_start_date)
 
 
+# TODO: add check for end_date > start_date
 def process_end_date(message):
     end_date = message.text.split(".")
     # print(database.find_unique_flight_from())
@@ -81,6 +82,7 @@ def process_end_date(message):
         bot.register_next_step_handler(msg, process_end_date)
 
 
+# TODO: add simple int checks
 def process_persons(message):
     persons = message.text
     journey_to_find.persons(persons)

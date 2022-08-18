@@ -1,13 +1,12 @@
-import local_config as config
+#import local_config as config
+import env_config as config
 import telebot
 from flask import Flask, request
 import os
 import logging
-import datetime
 from SearchInfo import SearchInfo
 from Database import Database
 from MarkupGenerator import MarkupGenerator
-from unique_data import *
 
 bot = telebot.TeleBot(config.telegram_token)
 

@@ -1,12 +1,14 @@
 #import local_config as config
 import env_config as config
 import telebot
+import pprint
 from flask import Flask, request
 import os
 import logging
 from SearchInfo import SearchInfo
 from Database import Database
 from MarkupGenerator import MarkupGenerator
+from unique_data import *
 
 bot = telebot.TeleBot(config.telegram_token)
 
@@ -26,10 +28,10 @@ def start_command(message):
                        reply_markup=markup_generator.generate_markup_from_word("List of airports", "departureairports"))
     bot.register_next_step_handler(msg, process_flight_from)
 
+
 # TODO: add a markup with list of airports and pagination
 def process_flight_from(message):
     flight_from = message.text.split(",")
-    #print(database.find_unique_flight_from())
     try:
         journey_to_find.set_flight_from(flight_from)
         msg = bot.reply_to(message, 'What is a *arrival airport*?',
@@ -39,7 +41,6 @@ def process_flight_from(message):
     except Exception as e:
         msg = bot.reply_to(message, f'Oops, there is no airport with name(s) {str(e)}. Try again!')
         bot.register_next_step_handler(msg, process_flight_from)
-
 
 
 def process_flight_to(message):
@@ -55,6 +56,7 @@ def process_flight_to(message):
         bot.register_next_step_handler(msg, process_flight_to)
 
 
+# TODO: add check for current_date > start_date
 def process_start_date(message):
     start_date = message.text.split(".")
     # print(database.find_unique_flight_from())
@@ -75,25 +77,47 @@ def process_end_date(message):
     try:
         journey_to_find.set_end_date(end_date)
         msg = bot.reply_to(message, 'How many adults are going? E.g. 2', parse_mode="Markdown")
-        bot.register_next_step_handler(msg, process_persons)
+        bot.register_next_step_handler(msg, process_adults)
     except Exception as e:
-        msg = bot.reply_to(message, f'Oops, date was sent in a wrong format. Try again!')
+        msg = bot.reply_to(message, str(e))
         bot.register_next_step_handler(msg, process_end_date)
 
 
 # TODO: add simple int checks
-def process_persons(message):
-    persons = message.text
-    journey_to_find.persons(persons)
+def process_adults(message):
+    adults = message.text
+    journey_to_find.set_adults(adults)
     msg = bot.reply_to(message, 'How many children are going? E.g. 1')
     bot.register_next_step_handler(msg, process_kids)
 
 
 def process_kids(message):
     kids = message.text
-    journey_to_find.kids(kids)
+    journey_to_find.set_kids(kids)
     msg = bot.reply_to(message, 'Thanks! We are searching for a best journey for you...')
     print(journey_to_find)
+
+
+@bot.callback_query_handler(func=lambda call: call.data =='departureairports')
+def show_departure_airports(call):
+    print(call)
+    bot.send_message(call.message.chat.id,
+                     "Here is a list of all departure airports. Choose one(s) that you need!",
+                     reply_markup=markup_generator.generate_markup_from_dict(outbounddepartureairports))
+
+
+
+
+@bot.callback_query_handler(func=lambda call: call.data.split('#')[0]=='page')
+def characters_page_callback(call):
+    page = int(call.data.split('#')[1])
+    bot.delete_message(
+        call.message.chat.id,
+        call.message.message_id
+    )
+    bot.send_message(call.message.chat.id,
+                     "Here is a list of all departure airports. Choose one(s) that you need!",
+                     reply_markup=markup_generator.generate_markup_from_dict(outbounddepartureairports, page))
 
 
 # check if heroku variable is in the environment

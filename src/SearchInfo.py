@@ -7,12 +7,12 @@ class SearchInfo:
     arrival_airports = [airport.lower() for airport in list(outboundarrivalairports.values())]
 
     def __init__(self, flight_from: list = None, flight_to: list = None, start_date: datetime.datetime = None,
-                 end_date: datetime.datetime = None, persons: int = 0, kids: int = 0):
+                 end_date: datetime.datetime = None, adults: int = 0, kids: int = 0):
         self.flight_from = flight_from
         self.flight_to = flight_to
         self.start_date = start_date
         self.end_date = end_date
-        self.persons = persons
+        self.adults = adults
         self.kids = kids
 
     def set_flight_from(self, flight_from: list):
@@ -60,15 +60,18 @@ class SearchInfo:
 
     def set_end_date(self, end_date: datetime.datetime):
         """Sets an end date of a journey"""
-        self.end_date = datetime.datetime(int(end_date[2]), int(end_date[1]), int(end_date[0]))
+        end_date = datetime.datetime(int(end_date[2]), int(end_date[1]), int(end_date[0]))
+        if self.start_date > end_date:
+            raise Exception("Sorry, end date can't be earlier than the start date. Try again!")
+        self.end_date = end_date
         return self
 
-    def persons(self, persons: int):
+    def set_adults(self, adults: int):
         """Sets amount of adults"""
-        self.persons = persons
+        self.adults = adults
         return self
 
-    def kids(self, kids: int):
+    def set_kids(self, kids: int):
         """Sets amount of kids"""
         self.kids = kids
         return self
@@ -83,5 +86,5 @@ class SearchInfo:
                f"Flight to: {self.flight_to} \n" \
                f"Start date: {self.start_date} \n" \
                f"End date: {self.end_date} \n" \
-               f"Persons: {self.persons} \n" \
+               f"Adults: {self.adults} \n" \
                f"Kids: {self.kids} \n"

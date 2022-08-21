@@ -1,7 +1,6 @@
-#import local_config as config
-import env_config as config
+import local_config as config
+#import env_config as config
 import telebot
-import pprint
 from flask import Flask, request
 import os
 import logging
@@ -45,7 +44,6 @@ def process_flight_from(message):
 
 def process_flight_to(message):
     flight_to = message.text.split(",")
-    # print(database.find_unique_flight_from())
     try:
         journey_to_find.set_flight_to(flight_to)
         msg = bot.reply_to(message, 'What is the *start date*? \n'
@@ -59,7 +57,6 @@ def process_flight_to(message):
 # TODO: add check for current_date > start_date
 def process_start_date(message):
     start_date = message.text.split(".")
-    # print(database.find_unique_flight_from())
     try:
         journey_to_find.set_start_date(start_date)
         msg = bot.reply_to(message, 'What is the *end date*? \n'
@@ -73,7 +70,6 @@ def process_start_date(message):
 # TODO: add check for end_date > start_date
 def process_end_date(message):
     end_date = message.text.split(".")
-    # print(database.find_unique_flight_from())
     try:
         journey_to_find.set_end_date(end_date)
         msg = bot.reply_to(message, 'How many adults are going? E.g. 2', parse_mode="Markdown")
@@ -98,14 +94,12 @@ def process_kids(message):
     print(journey_to_find)
 
 
+# CALLBACK QUERIES
 @bot.callback_query_handler(func=lambda call: call.data =='departureairports')
 def show_departure_airports(call):
-    print(call)
     bot.send_message(call.message.chat.id,
                      "Here is a list of all departure airports. Choose one(s) that you need!",
                      reply_markup=markup_generator.generate_markup_from_dict(outbounddepartureairports))
-
-
 
 
 @bot.callback_query_handler(func=lambda call: call.data.split('#')[0]=='page')
@@ -117,7 +111,26 @@ def characters_page_callback(call):
     )
     bot.send_message(call.message.chat.id,
                      "Here is a list of all departure airports. Choose one(s) that you need!",
-                     reply_markup=markup_generator.generate_markup_from_dict(outbounddepartureairports, page))
+                     reply_markup=markup_generator.generate_markup_from_dict(outbounddepartureairports,
+                                                                             page,
+                                                                             journey_to_find.flight_from))
+
+
+@bot.callback_query_handler(func=lambda call: call.data[0] != "✔")
+def change_departure_airport(call):
+    airport_full = call.data
+    airport_code = call.data[-4:-1]  # "Airport (PLZ)" -> PLZ
+    if airport_code not in journey_to_find.flight_from:
+        journey_to_find.add_airport_to_flight_from(airport_code)
+        new_markup = markup_generator.add_airport_to_markup(call.message.reply_markup, airport_full)
+    else:
+        journey_to_find.delete_airport_to_flight_from(airport_code)
+        new_markup = markup_generator.delete_airport_to_markup(call.message.reply_markup, airport_full)
+    print(journey_to_find.flight_from)
+    bot.edit_message_text("Here is a list of all departure airports. Choose one(s) that you need!",
+                          chat_id=call.message.chat.id,
+                          message_id=call.message.message_id,
+                          reply_markup=new_markup)
 
 
 # check if heroku variable is in the environment

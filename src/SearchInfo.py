@@ -6,8 +6,12 @@ class SearchInfo:
     departure_airports = [airport.lower() for airport in list(outbounddepartureairports.values())]
     arrival_airports = [airport.lower() for airport in list(outboundarrivalairports.values())]
 
-    def __init__(self, flight_from: list = None, flight_to: list = None, start_date: datetime.datetime = None,
+    def __init__(self, flight_from=None, flight_to=None, start_date: datetime.datetime = None,
                  end_date: datetime.datetime = None, adults: int = 0, kids: int = 0):
+        if flight_to is None:
+            flight_to = []
+        if flight_from is None:
+            flight_from = []
         self.flight_from = flight_from
         self.flight_to = flight_to
         self.start_date = start_date
@@ -79,6 +83,14 @@ class SearchInfo:
     def lower_list(self, array: list):
         """Return list with lowercased elements in it"""
         return [elem.lower() for elem in array]
+
+    def add_airport_to_flight_from(self, airport: str):
+        """Adds one airport to flight_from parameter"""
+        self.flight_from.append(airport)
+
+    def delete_airport_to_flight_from(self, airport: str):
+        """Deletes an airport to flight_from parameter"""
+        self.flight_from.remove(airport)
 
     def __str__(self):
         return f"SearchInfo: " \

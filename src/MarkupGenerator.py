@@ -36,6 +36,15 @@ class MarkupGenerator:
 
         return paginator.markup
 
+    def generate_markup_for_hotels(self):
+        markup = InlineKeyboardMarkup()
+        markup.row_width = 2
+        markup.add(InlineKeyboardButton("⬅️", callback_data="previous"),
+                   InlineKeyboardButton("➡️", callback_data="next"))
+        markup.add(InlineKeyboardButton("💳 Pay now", callback_data="pay"))
+        markup.add(InlineKeyboardButton("📍 Show location", callback_data="maps"))
+        return markup
+
     @staticmethod
     def transform_dict_into_list(dictionary):
         array = []

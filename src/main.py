@@ -1,3 +1,5 @@
+import asyncio
+
 import local_config as config
 #import env_config as config
 import telebot
@@ -6,8 +8,12 @@ import os
 import logging
 from SearchInfo import SearchInfo
 from Database import Database
+from AsyncDatabase import *
 from MarkupGenerator import MarkupGenerator
 from unique_data import *
+from telebot.types import LabeledPrice, ShippingOption
+
+prices = [LabeledPrice(label='Hotel Five Stars Riveera', amount=125050), LabeledPrice('Gift wrapping', 500)]
 
 bot = telebot.TeleBot(config.telegram_token)
 
@@ -91,10 +97,72 @@ def process_kids(message):
     kids = message.text
     journey_to_find.set_kids(kids)
     msg = bot.reply_to(message, 'Thanks! We are searching for a best journey for you...')
-    print(journey_to_find)
+    make_search(msg)
+    #journey_to_find.offers = database.find_offers(search_info=journey_to_find)
+
+
+def make_search(message):
+    offers = asyncio.run(call_find_journey(journey_to_find))
+    offers = [offer.set_hotel(Hotel(*list(asyncio.run(call_find_hotel(offer))))) for offer in offers]
+    journey_to_find.set_offers(offers)
+    bot.send_photo(message.chat.id,
+                   photo=open(offers[0].photo_path, "rb"),
+                   caption=offers[0],
+                   reply_markup=markup_generator.generate_markup_for_hotels())
+    print(offers[0])
 
 
 # CALLBACK QUERIES
+@bot.callback_query_handler(func=lambda call: call.data =='previous')
+def show_previous_hotel(call):
+    journey_to_find.current_offer = (journey_to_find.current_offer - 1) % len(journey_to_find.offers)
+    bot.delete_message(
+        call.message.chat.id,
+        call.message.message_id
+    )
+    bot.send_photo(call.message.chat.id,
+                   photo=open(journey_to_find.offers[journey_to_find.current_offer].photo_path, "rb"),
+                   caption=journey_to_find.offers[journey_to_find.current_offer],
+                   reply_markup=markup_generator.generate_markup_for_hotels())
+
+
+@bot.callback_query_handler(func=lambda call: call.data =='next')
+def show_next_hotel(call):
+    journey_to_find.current_offer = (journey_to_find.current_offer + 1) % len(journey_to_find.offers)
+    bot.delete_message(
+        call.message.chat.id,
+        call.message.message_id
+    )
+    bot.send_photo(call.message.chat.id,
+                   photo=open(journey_to_find.offers[journey_to_find.current_offer].photo_path, "rb"),
+                   caption=journey_to_find.offers[journey_to_find.current_offer],
+                   reply_markup=markup_generator.generate_markup_for_hotels())
+
+@bot.callback_query_handler(func=lambda call: call.data =='pay')
+def start_payment(call):
+    bot.send_invoice(
+        call.message.chat.id,  # chat_id
+        'A wonderful trip to Palma de Mallorca',  # title
+        'Tired of work? Wanna have a little rest of the busy town? Children are yelling without stopping? Book a flight to Mallorca right now and finally get some nice holidays!',
+        # description
+        'HAPPY FRIDAYS COUPON',  # invoice_payload
+        "284685063:TEST:NDY4ZTJlOTA4Yjgw",  # provider_token
+        'eur',  # currency
+        prices,  # prices
+        photo_url='https://img.welt.de/img/reise/mobile240376829/5042501447-ci102l-w1024/Beach-and-bay-with-turquoise-sea-water-Cala-des-Moro-Mallorca.jpg',
+        photo_height=512,  # !=0/None or picture won't be shown
+        photo_width=512,
+        is_flexible=False,  # True If you need to set up Shipping Fee
+        start_parameter='time-machine-example')
+
+
+@bot.callback_query_handler(func=lambda call: call.data =='maps')
+def send_location(call):
+    bot.send_location(call.message.chat.id,
+                      latitude=journey_to_find.offers[journey_to_find.current_offer].hotel.latitude,
+                      longitude=journey_to_find.offers[journey_to_find.current_offer].hotel.longitude)
+
+
 @bot.callback_query_handler(func=lambda call: call.data =='departureairports')
 def show_departure_airports(call):
     bot.send_message(call.message.chat.id,
@@ -126,7 +194,6 @@ def change_departure_airport(call):
     else:
         journey_to_find.delete_airport_to_flight_from(airport_code)
         new_markup = markup_generator.delete_airport_to_markup(call.message.reply_markup, airport_full)
-    print(journey_to_find.flight_from)
     bot.edit_message_text("Here is a list of all departure airports. Choose one(s) that you need!",
                           chat_id=call.message.chat.id,
                           message_id=call.message.message_id,

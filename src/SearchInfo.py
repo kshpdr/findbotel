@@ -7,39 +7,45 @@ class SearchInfo:
     arrival_airports = [airport.lower() for airport in list(outboundarrivalairports.values())]
 
     def __init__(self, flight_from=None, flight_to=None, start_date: datetime.datetime = None,
-                 end_date: datetime.datetime = None, adults: int = 0, kids: int = 0):
+                 end_date: datetime.datetime = None, adults: int = 0, kids: int = 0, offers=None, current_offer=None):
         if flight_to is None:
             flight_to = []
         if flight_from is None:
             flight_from = []
+        if offers is None:
+            offers = []
         self.flight_from = flight_from
         self.flight_to = flight_to
         self.start_date = start_date
         self.end_date = end_date
         self.adults = adults
         self.kids = kids
+        self.offers = offers
+        self.current_offer = current_offer
 
-    def set_flight_from(self, flight_from: list):
+    def set_flight_from(self, airport_names: list):
         """Set a flight_from parameter to the list, when all airports are correct"""
-        flight_from = self.lower_list(flight_from)
-        missing_airports = self.missing_airports(flight_from, self.departure_airports)
+        airport_names = self.lower_list(airport_names)
+        missing_airports = self.missing_airports(airport_names, self.departure_airports)
 
         if len(missing_airports) != 0:
             error_message = [f'{airport} ' for airport in missing_airports]
             raise Exception(error_message)
 
+        flight_from = self.get_codes(airport_names, outbounddepartureairports)
         self.flight_from = flight_from
         return self
 
-    def set_flight_to(self, flight_to):
+    def set_flight_to(self, airport_names):
         """Set a flight_to parameter to the list, when all airports are correct"""
-        flight_to = self.lower_list(flight_to)
-        missing_airports = self.missing_airports(flight_to, self.arrival_airports)
+        airport_names = self.lower_list(airport_names)
+        missing_airports = self.missing_airports(airport_names, self.arrival_airports)
 
         if len(missing_airports) != 0:
             error_message = [f'{airport} ' for airport in missing_airports]
             raise Exception(error_message)
 
+        flight_to = self.get_codes(airport_names, outboundarrivalairports)
         self.flight_to = flight_to
         return self
 
@@ -56,6 +62,15 @@ class SearchInfo:
                 missing_airports.append(airport_to_check)
 
         return missing_airports
+
+    def get_codes(self, airports_to_check, target_airports):
+        """Finds a code of all airports and returns a list of them"""
+        codes = []
+        for airport in airports_to_check:
+            for key in list(target_airports.keys()):
+                if airport in target_airports[key].lower():
+                    codes.append(key)
+        return codes
 
     def set_start_date(self, start_date: datetime.datetime):
         """Sets a start date of a journey"""
@@ -78,6 +93,11 @@ class SearchInfo:
     def set_kids(self, kids: int):
         """Sets amount of kids"""
         self.kids = kids
+        return self
+
+    def set_offers(self, offers: list):
+        self.current_offer = 0
+        self.offers = offers
         return self
 
     def lower_list(self, array: list):

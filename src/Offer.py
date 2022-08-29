@@ -32,13 +32,13 @@ class Offer:
         if self.oceanview == "true":
             str += "🌅 Room with ocean view \n"
         if self.mealtype == "allinclusive":
-            str += "🥘 All inclusive"
+            str += "🥘 All inclusive \n"
         elif self.mealtype == "breakfast":
-            str += "🥐 Only breakfast"
+            str += "🥐 Only breakfast \n"
         return str
-
-    def __repr__(self):
-        return str(self)
+    #
+    # def __repr__(self):
+    #     return str(self)
 
     def set_hotel(self, hotel):
         self.hotel = hotel

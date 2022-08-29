@@ -7,7 +7,7 @@ class SearchInfo:
     arrival_airports = [airport.lower() for airport in list(outboundarrivalairports.values())]
 
     def __init__(self, flight_from=None, flight_to=None, start_date: datetime.datetime = None,
-                 end_date: datetime.datetime = None, adults: int = 0, kids: int = 0, offers=None, current_offer=None):
+                 end_date: datetime.datetime = None, adults: int = 0, kids: int = 0, offers=None, current_offer=0):
         if flight_to is None:
             flight_to = []
         if flight_from is None:
@@ -49,29 +49,6 @@ class SearchInfo:
         self.flight_to = flight_to
         return self
 
-    def missing_airports(self, airports_to_check, airports):
-        """Checks whether some input airports are missing and return a list of them"""
-        missing_airports = []
-        for airport_to_check in airports_to_check:
-            found = False
-            for airport in airports:
-                if airport_to_check in airport:
-                    found = True
-                    break
-            if not found:
-                missing_airports.append(airport_to_check)
-
-        return missing_airports
-
-    def get_codes(self, airports_to_check, target_airports):
-        """Finds a code of all airports and returns a list of them"""
-        codes = []
-        for airport in airports_to_check:
-            for key in list(target_airports.keys()):
-                if airport in target_airports[key].lower():
-                    codes.append(key)
-        return codes
-
     def set_start_date(self, start_date: datetime.datetime):
         """Sets a start date of a journey"""
         self.start_date = datetime.datetime(int(start_date[2]), int(start_date[1]), int(start_date[0]))
@@ -85,24 +62,54 @@ class SearchInfo:
         self.end_date = end_date
         return self
 
-    def set_adults(self, adults: int):
+    def set_adults(self, adults: str):
         """Sets amount of adults"""
-        self.adults = adults
-        return self
+        if adults in "0123456789":
+            self.adults = adults
+            return self
+        raise Exception("Please enter a number.")
 
-    def set_kids(self, kids: int):
+    def set_kids(self, kids: str):
         """Sets amount of kids"""
-        self.kids = kids
-        return self
+        if kids in "0123456789":
+            self.kids = kids
+            return self
+        raise Exception("Please enter a number.")
 
     def set_offers(self, offers: list):
         self.current_offer = 0
         self.offers = offers
         return self
 
-    def lower_list(self, array: list):
+    @staticmethod
+    def lower_list(array: list):
         """Return list with lowercased elements in it"""
         return [elem.lower() for elem in array]
+
+    @staticmethod
+    def missing_airports(airports_to_check, airports):
+        """Checks whether some input airports are missing and return a list of them"""
+        missing_airports = []
+        for airport_to_check in airports_to_check:
+            found = False
+            for airport in airports:
+                if airport_to_check in airport:
+                    found = True
+                    break
+            if not found:
+                missing_airports.append(airport_to_check)
+
+        return missing_airports
+
+    @staticmethod
+    def get_codes(airports_to_check, target_airports):
+        """Finds a code of all airports and returns a list of them"""
+        codes = []
+        for airport in airports_to_check:
+            for key in list(target_airports.keys()):
+                if airport in target_airports[key].lower():
+                    codes.append(key)
+        return codes
 
     def add_airport_to_flight_from(self, airport: str):
         """Adds one airport to flight_from parameter"""

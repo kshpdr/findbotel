@@ -1,17 +1,14 @@
-import asyncio
-
 import local_config as config
 #import env_config as config
 import telebot
 from flask import Flask, request
 import os
 import logging
-from SearchInfo import SearchInfo
 from Database import Database
 from AsyncDatabase import *
 from MarkupGenerator import MarkupGenerator
-from unique_data import *
-from telebot.types import LabeledPrice, ShippingOption
+from telebot.types import LabeledPrice
+from handlers.query_handlers import *
 
 prices = [LabeledPrice(label='Hotel Five Stars Riveera', amount=125050), LabeledPrice('Gift wrapping', 500)]
 
@@ -21,6 +18,15 @@ journey_to_find = SearchInfo()
 database = Database(config.DATABASE_URL)
 markup_generator = MarkupGenerator()
 
+
+# def register_handlers():
+#     #bot.register_message_handler(start_command, commands=['start'], pass_bot=True)
+#     bot.register_callback_query_handler(show_departure_airports, lambda call: call.data == 'departureairports', pass_bot=True)
+#     bot.register_callback_query_handler(show_arrival_airports, lambda call: call.data == 'arrivalairports', pass_bot=True)
+#     bot.register_callback_query_handler(ready_with_departure_airports, lambda call: call.data == 'departure_ready', pass_bot=True)
+#     bot.register_callback_query_handler(ready_with_arrival_airports, lambda call: call.data == 'arrival_ready', pass_bot=True)
+#
+# register_handlers()
 
 @bot.message_handler(commands=['start'])
 def start_command(message):
@@ -34,11 +40,14 @@ def start_command(message):
     bot.register_next_step_handler(msg, process_flight_from)
 
 
-# TODO: add a markup with list of airports and pagination
 def process_flight_from(message):
+    if message.text == "/start":
+        start_command(message)
+        return
     flight_from = message.text.split(",")
     try:
         journey_to_find.set_flight_from(flight_from)
+        #asyncio.run(find_journey_from_departure_airport(journey_to_find))
         msg = bot.reply_to(message, 'What is a *arrival airport*?',
                            parse_mode="Markdown",
                            reply_markup=markup_generator.generate_markup_from_word("List of airports", "arrivalairports"))
@@ -50,6 +59,7 @@ def process_flight_from(message):
 
 def process_flight_to(message):
     flight_to = message.text.split(",")
+    print(journey_to_find.flight_from)
     try:
         journey_to_find.set_flight_to(flight_to)
         msg = bot.reply_to(message, 'What is the *start date*? \n'
@@ -60,7 +70,6 @@ def process_flight_to(message):
         bot.register_next_step_handler(msg, process_flight_to)
 
 
-# TODO: add check for current_date > start_date
 def process_start_date(message):
     start_date = message.text.split(".")
     try:
@@ -73,7 +82,6 @@ def process_start_date(message):
         bot.register_next_step_handler(msg, process_start_date)
 
 
-# TODO: add check for end_date > start_date
 def process_end_date(message):
     end_date = message.text.split(".")
     try:
@@ -87,29 +95,47 @@ def process_end_date(message):
 
 # TODO: add simple int checks
 def process_adults(message):
-    adults = message.text
-    journey_to_find.set_adults(adults)
-    msg = bot.reply_to(message, 'How many children are going? E.g. 1')
-    bot.register_next_step_handler(msg, process_kids)
+    try:
+        adults = message.text
+        journey_to_find.set_adults(adults)
+        msg = bot.reply_to(message, 'How many children are going? E.g. 1')
+        bot.register_next_step_handler(msg, process_kids)
+    except Exception as e:
+        msg = bot.reply_to(message, str(e))
+        bot.register_next_step_handler(msg, process_adults)
 
 
 def process_kids(message):
-    kids = message.text
-    journey_to_find.set_kids(kids)
-    msg = bot.reply_to(message, 'Thanks! We are searching for a best journey for you...')
-    make_search(msg)
-    #journey_to_find.offers = database.find_offers(search_info=journey_to_find)
+    try:
+        kids = message.text
+        journey_to_find.set_kids(kids)
+        msg = bot.reply_to(message, 'Thanks! We are searching for a best journey for you...')
+        make_search(msg)
+    except Exception as e:
+        msg = bot.reply_to(message, str(e))
+        bot.register_next_step_handler(msg, process_kids)
 
-
+# TODO: cache all offers for all hotels
 def make_search(message):
-    offers = asyncio.run(call_find_journey(journey_to_find))
-    offers = [offer.set_hotel(Hotel(*list(asyncio.run(call_find_hotel(offer))))) for offer in offers]
-    journey_to_find.set_offers(offers)
-    bot.send_photo(message.chat.id,
-                   photo=open(offers[0].photo_path, "rb"),
-                   caption=offers[0],
-                   reply_markup=markup_generator.generate_markup_for_hotels())
-    print(offers[0])
+    try:
+        start = time.time()
+        print(f"started at {start}")
+        raw_offers = asyncio.run(find_journey(journey_to_find))
+        finish = time.time()
+        print(f"finished at {finish}")
+        print(finish - start)
+        offers = [Offer(*list(raw_offer)) for raw_offer in raw_offers]
+        offers = [offer.set_hotel(Hotel(*list(asyncio.run(find_hotel(offer))))) for offer in offers]
+        journey_to_find.set_offers(offers)
+        caption = str(offers[journey_to_find.current_offer])
+        caption += f"\n {journey_to_find.current_offer + 1} out of {len(journey_to_find.offers)} offers"
+        bot.send_photo(message.chat.id,
+                       photo=open(offers[journey_to_find.current_offer].photo_path, "rb"),
+                       caption=caption,
+                       reply_markup=markup_generator.generate_markup_for_hotels())
+    except Exception as e:
+        msg = bot.reply_to(message, f'Oops, sorry, there is no journeys for current request. Try another one!')
+        print(str(e))
 
 
 # CALLBACK QUERIES
@@ -120,9 +146,11 @@ def show_previous_hotel(call):
         call.message.chat.id,
         call.message.message_id
     )
+    caption = str(journey_to_find.offers[journey_to_find.current_offer])
+    caption += f"\n {journey_to_find.current_offer + 1} out of {len(journey_to_find.offers)} offers"
     bot.send_photo(call.message.chat.id,
                    photo=open(journey_to_find.offers[journey_to_find.current_offer].photo_path, "rb"),
-                   caption=journey_to_find.offers[journey_to_find.current_offer],
+                   caption=caption,
                    reply_markup=markup_generator.generate_markup_for_hotels())
 
 
@@ -133,10 +161,13 @@ def show_next_hotel(call):
         call.message.chat.id,
         call.message.message_id
     )
+    caption = str(journey_to_find.offers[journey_to_find.current_offer])
+    caption += f"\n {journey_to_find.current_offer + 1} out of {len(journey_to_find.offers)} offers"
     bot.send_photo(call.message.chat.id,
                    photo=open(journey_to_find.offers[journey_to_find.current_offer].photo_path, "rb"),
-                   caption=journey_to_find.offers[journey_to_find.current_offer],
+                   caption=caption,
                    reply_markup=markup_generator.generate_markup_for_hotels())
+
 
 @bot.callback_query_handler(func=lambda call: call.data =='pay')
 def start_payment(call):
@@ -165,36 +196,99 @@ def send_location(call):
 
 @bot.callback_query_handler(func=lambda call: call.data =='departureairports')
 def show_departure_airports(call):
+    bot.clear_step_handler(call.message)
     bot.send_message(call.message.chat.id,
                      "Here is a list of all departure airports. Choose one(s) that you need!",
-                     reply_markup=markup_generator.generate_markup_from_dict(outbounddepartureairports))
+                     reply_markup=markup_generator.generate_markup_for_departure_airports(journey_to_find))
 
 
-@bot.callback_query_handler(func=lambda call: call.data.split('#')[0]=='page')
+@bot.callback_query_handler(func=lambda call: call.data =='arrivalairports')
+def show_arrival_airports(call):
+    bot.clear_step_handler(call.message)
+    bot.send_message(call.message.chat.id,
+                     "Here is a list of all arrival airports. Choose one(s) that you need!",
+                     reply_markup=markup_generator.generate_markup_for_arrival_airports(journey_to_find))
+
+
+@bot.callback_query_handler(func=lambda call: call.data =='departure_ready')
+def ready_with_departure_airports(call):
+    msg = bot.reply_to(call.message, 'What is a *arrival airport*?',
+                       parse_mode="Markdown",
+                       reply_markup=markup_generator.generate_markup_from_word("List of airports", "arrivalairports"))
+    bot.register_next_step_handler(msg, process_flight_to)
+
+
+@bot.callback_query_handler(func=lambda call: call.data =='arrival_ready')
+def ready_with_arrival_airports(call):
+    msg = bot.reply_to(call.message, 'What is the *start date*? \n'
+                                    'E.g. 29.09.2022', parse_mode="Markdown")
+    bot.register_next_step_handler(msg, process_start_date)
+
+
+@bot.callback_query_handler(func=lambda call: call.data =='all_offers')
+def show_all_offers_for_hotel(call):
+    raw_offers = asyncio.run(find_journey_for_hotel(journey_to_find))
+    offers = [Offer(*list(raw_offer)) for raw_offer in raw_offers]
+    offers = [offer.set_hotel(Hotel(*list(asyncio.run(find_hotel(offer))))) for offer in offers]
+    journey_to_find.set_offers(offers)
+    bot.send_photo(call.message.chat.id,
+                   photo=open(offers[0].photo_path, "rb"),
+                   caption=offers[0],
+                   reply_markup=markup_generator.generate_markup_for_hotels())
+
+
+@bot.callback_query_handler(func=lambda call: call.data.split('#')[0]=='dpage')
 def characters_page_callback(call):
+    print(call.data.split)
     page = int(call.data.split('#')[1])
+    markup_generator.dpage = page
     bot.delete_message(
         call.message.chat.id,
         call.message.message_id
     )
     bot.send_message(call.message.chat.id,
                      "Here is a list of all departure airports. Choose one(s) that you need!",
-                     reply_markup=markup_generator.generate_markup_from_dict(outbounddepartureairports,
-                                                                             page,
-                                                                             journey_to_find.flight_from))
+                     reply_markup=markup_generator.generate_markup_for_departure_airports(journey_to_find, markup_generator.dpage))
 
 
-@bot.callback_query_handler(func=lambda call: call.data[0] != "✔")
+@bot.callback_query_handler(func=lambda call: call.data.split('#')[0]=='apage')
+def characters_page_callback(call):
+    page = int(call.data.split('#')[1])
+    markup_generator.apage = page
+    bot.delete_message(
+        call.message.chat.id,
+        call.message.message_id
+    )
+    bot.send_message(call.message.chat.id,
+                     "Here is a list of all arrival airports. Choose one(s) that you need!",
+                     reply_markup=markup_generator.generate_markup_for_arrival_airports(journey_to_find, markup_generator.apage))
+
+
+@bot.callback_query_handler(func=lambda call: call.data.split('#')[0] == 'd')
 def change_departure_airport(call):
-    airport_full = call.data
-    airport_code = call.data[-4:-1]  # "Airport (PLZ)" -> PLZ
+    print(call.data)
+    airport_code = call.data[-4:-1]  # "Airport (PLZ)" -> "PLZ"
     if airport_code not in journey_to_find.flight_from:
         journey_to_find.add_airport_to_flight_from(airport_code)
-        new_markup = markup_generator.add_airport_to_markup(call.message.reply_markup, airport_full)
     else:
         journey_to_find.delete_airport_to_flight_from(airport_code)
-        new_markup = markup_generator.delete_airport_to_markup(call.message.reply_markup, airport_full)
+    new_markup = markup_generator.generate_markup_for_departure_airports(journey_to_find, markup_generator.dpage)
     bot.edit_message_text("Here is a list of all departure airports. Choose one(s) that you need!",
+                          chat_id=call.message.chat.id,
+                          message_id=call.message.message_id,
+                          reply_markup=new_markup)
+
+
+@bot.callback_query_handler(func=lambda call: call.data.split('#')[0] == 'a')
+def change_arrival_airport(call):
+    print(call.data)
+    airport_code = call.data[-4:-1]  # "Airport (PLZ)" -> "PLZ"
+    if airport_code not in journey_to_find.flight_to:
+        journey_to_find.flight_to.append(airport_code)
+    else:
+        journey_to_find.flight_to.remove(airport_code)
+    new_markup = markup_generator.generate_markup_for_arrival_airports(journey_to_find, markup_generator.apage)
+    bot.edit_message_text("Here is a list of all arrival airports. Choose one(s) that you need!",
                           chat_id=call.message.chat.id,
                           message_id=call.message.message_id,
                           reply_markup=new_markup)

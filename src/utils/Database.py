@@ -30,6 +30,18 @@ class Database:
         self.cur.execute(query)
         return self.cur.fetchone()
 
+    def find_journey_for_hotel(self, search_info: SearchInfo):
+        query = f"""SELECT * FROM offers WHERE
+                            outbounddepartureairport = '{search_info.flight_from[0]}' AND
+                            outboundarrivalairport = '{search_info.flight_to[0]}' AND
+                            departuredate LIKE '%{str(search_info.start_date.date())}%' AND
+                            returndate LIKE '%{str(search_info.end_date.date())}%' AND
+                            countadults = '{search_info.adults}' AND
+                            countchildren = '{search_info.kids}' AND 
+                            hotelid = '{search_info.offers[search_info.current_offer].hotelid}';"""
+        self.cur.execute(query)
+        return self.cur.fetchall()
+
     @staticmethod
     def format_airports(flight_from):
         line = "("

@@ -4,7 +4,8 @@ import psycopg
 from SearchInfo import SearchInfo
 from Offer import Offer
 from Hotel import Hotel
-from local_config import *
+#from local_config import *
+from env_config import *
 import time
 
 

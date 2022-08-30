@@ -1,9 +1,6 @@
 from telebot import TeleBot
 from telebot.types import CallbackQuery
 
-import local_config as config
-#import env_config as config
-
 from utils.MarkupGenerator import MarkupGenerator
 from utils.Database import Database
 from models.Offer import Offer
@@ -13,10 +10,6 @@ from handlers.Processor import Processor
 
 from telebot.types import LabeledPrice
 
-
-# journey_to_find = SearchInfo()
-# database = Database(config.DATABASE_URL)
-# markup_generator = MarkupGenerator()
 
 prices = [LabeledPrice(label='Hotel Five Stars Riveera', amount=125050), LabeledPrice('Gift wrapping', 500)]
 

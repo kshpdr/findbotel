@@ -310,7 +310,7 @@ if "HEROKU" in list(os.environ.keys()):
         bot.remove_webhook()
         bot.set_webhook(url=config.app_url)
         return "?", 200
-    server.run(host="0.0.0.0", port=os.environ.get('PORT', 80))
+    server.run(host="0.0.0.0", port=os.environ.get('PORT', process.env.PORT))
 else:
     # without heroku variable local use
     # delete webhook and use long polling

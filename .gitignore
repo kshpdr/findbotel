@@ -2,3 +2,6 @@
 src/local_config.py
 src/little_script.py
 venv
+.idea
+#findbotel.egg-info
+.pytest_cache

@@ -1,12 +1,8 @@
-import asyncio
-
 import psycopg
-from SearchInfo import SearchInfo
-from Offer import Offer
-from Hotel import Hotel
-#from local_config import *
-from env_config import *
-import time
+from models.SearchInfo import SearchInfo
+from models.Offer import Offer
+from local_config import *
+#from env_config import *
 
 
 async def find_journey(search_info: SearchInfo):

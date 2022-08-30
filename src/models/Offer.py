@@ -1,5 +1,4 @@
 import random
-import os
 
 
 class Offer:
@@ -44,8 +43,8 @@ class Offer:
     def set_hotel(self, hotel):
         self.hotel = hotel
         # for test purposes
-        print(os.path.dirname(os.path.abspath(__file__)))
-        self.photo_path = f"media/{random.randint(1,11)}.jpg"
+        #self.photo_path = f"media/{random.randint(1,11)}.jpg"
+        self.photo_path = f"../media/{random.randint(1, 11)}.jpg"
         # for a real life case
         # self.photo_path = f"../media/{hotel.id}.jpeg"
         return self

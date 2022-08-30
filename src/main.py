@@ -1,12 +1,15 @@
-#import local_config as config
-import env_config as config
+import local_config as config
+import time
+#import env_config as config
 import telebot
 from flask import Flask, request
 import os
 import logging
-from Database import Database
-from AsyncDatabase import *
-from MarkupGenerator import MarkupGenerator
+from utils.Database import Database
+from utils.MarkupGenerator import MarkupGenerator
+from models.Offer import Offer
+from models.SearchInfo import SearchInfo
+from models.Hotel import Hotel
 from telebot.types import LabeledPrice
 
 prices = [LabeledPrice(label='Hotel Five Stars Riveera', amount=125050), LabeledPrice('Gift wrapping', 500)]
@@ -17,15 +20,6 @@ journey_to_find = SearchInfo()
 database = Database(config.DATABASE_URL)
 markup_generator = MarkupGenerator()
 
-
-# def register_handlers():
-#     #bot.register_message_handler(start_command, commands=['start'], pass_bot=True)
-#     bot.register_callback_query_handler(show_departure_airports, lambda call: call.data == 'departureairports', pass_bot=True)
-#     bot.register_callback_query_handler(show_arrival_airports, lambda call: call.data == 'arrivalairports', pass_bot=True)
-#     bot.register_callback_query_handler(ready_with_departure_airports, lambda call: call.data == 'departure_ready', pass_bot=True)
-#     bot.register_callback_query_handler(ready_with_arrival_airports, lambda call: call.data == 'arrival_ready', pass_bot=True)
-#
-# register_handlers()
 
 @bot.message_handler(commands=['start'])
 def start_command(message):
@@ -46,7 +40,6 @@ def process_flight_from(message):
     flight_from = message.text.split(",")
     try:
         journey_to_find.set_flight_from(flight_from)
-        #asyncio.run(find_journey_from_departure_airport(journey_to_find))
         msg = bot.reply_to(message, 'What is a *arrival airport*?',
                            parse_mode="Markdown",
                            reply_markup=markup_generator.generate_markup_from_word("List of airports", "arrivalairports"))
@@ -119,12 +112,14 @@ def make_search(message):
     try:
         start = time.time()
         print(f"started at {start}")
-        raw_offers = asyncio.run(find_journey(journey_to_find))
+        #raw_offers = asyncio.run(find_journey(journey_to_find))
+        raw_offers = database.find_journey(journey_to_find)
         finish = time.time()
         print(f"finished at {finish}")
         print(finish - start)
         offers = [Offer(*list(raw_offer)) for raw_offer in raw_offers]
-        offers = [offer.set_hotel(Hotel(*list(asyncio.run(find_hotel(offer))))) for offer in offers]
+        #offers = [offer.set_hotel(Hotel(*list(asyncio.run(find_hotel(offer))))) for offer in offers]
+        offers = [offer.set_hotel(Hotel(*list(database.find_hotel(offer)))) for offer in offers]
         journey_to_find.set_offers(offers)
         caption = str(offers[journey_to_find.current_offer])
         caption += f"\n {journey_to_find.current_offer + 1} out of {len(journey_to_find.offers)} offers"
@@ -226,9 +221,11 @@ def ready_with_arrival_airports(call):
 
 @bot.callback_query_handler(func=lambda call: call.data =='all_offers')
 def show_all_offers_for_hotel(call):
-    raw_offers = asyncio.run(find_journey_for_hotel(journey_to_find))
+    #raw_offers = asyncio.run(find_journey_for_hotel(journey_to_find))
+    raw_offers = database.find_journey_for_hotel(journey_to_find)
     offers = [Offer(*list(raw_offer)) for raw_offer in raw_offers]
-    offers = [offer.set_hotel(Hotel(*list(asyncio.run(find_hotel(offer))))) for offer in offers]
+    #offers = [offer.set_hotel(Hotel(*list(asyncio.run(find_hotel(offer))))) for offer in offers]
+    offers = [offer.set_hotel(Hotel(*list(database.find_hotel(offer)))) for offer in offers]
     journey_to_find.set_offers(offers)
     bot.send_photo(call.message.chat.id,
                    photo=open(offers[0].photo_path, "rb"),

@@ -1,8 +1,8 @@
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from telegram_bot_pagination import InlineKeyboardPaginator
 
-from SearchInfo import SearchInfo
-from unique_data import *
+from models.SearchInfo import SearchInfo
+from utils.unique_data import *
 
 class MarkupGenerator:
     dpage = 1

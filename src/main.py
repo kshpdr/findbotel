@@ -1,6 +1,6 @@
-import local_config as config
+#import local_config as config
 import time
-#import env_config as config
+import env_config as config
 import telebot
 from flask import Flask, request
 import os

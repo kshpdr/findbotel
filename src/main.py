@@ -8,7 +8,6 @@ from Database import Database
 from AsyncDatabase import *
 from MarkupGenerator import MarkupGenerator
 from telebot.types import LabeledPrice
-from handlers.query_handlers import *
 
 prices = [LabeledPrice(label='Hotel Five Stars Riveera', amount=125050), LabeledPrice('Gift wrapping', 500)]
 

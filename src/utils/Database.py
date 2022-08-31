@@ -15,13 +15,13 @@ class Database:
     def find_journey(self, search_info: SearchInfo):
         flight_from = self.format_airports(search_info.flight_from)
         flight_to = self.format_airports(search_info.flight_to)
-        query = f"""SELECT * FROM offers WHERE
-                            outbounddepartureairport IN {flight_from} AND
-                            outboundarrivalairport IN {flight_to} AND
-                            departuredate LIKE '%{str(search_info.start_date.date())}%' AND
-                            returndate LIKE '%{str(search_info.end_date.date())}%' AND
-                            countadults = '{search_info.adults}' AND
-                            countchildren = '{search_info.kids}';"""
+        query = f"""SELECT * FROM offers2 INNER JOIN hotels ON hotels.id = offers2.hotelid WHERE
+                                    outbounddepartureairport IN {flight_from} AND
+                                    outboundarrivalairport IN {flight_to} AND
+                                    departuredate = '{str(search_info.start_date.date())}' AND
+                                    returndate = '{str(search_info.end_date.date())}' AND
+                                    countadults = {int(search_info.adults)} AND
+                                    countchildren = {int(search_info.kids)};"""
         self.cur.execute(query)
         return self.cur.fetchall()
 
@@ -31,14 +31,16 @@ class Database:
         return self.cur.fetchone()
 
     def find_journey_for_hotel(self, search_info: SearchInfo):
-        query = f"""SELECT * FROM offers WHERE
-                            outbounddepartureairport = '{search_info.flight_from[0]}' AND
-                            outboundarrivalairport = '{search_info.flight_to[0]}' AND
-                            departuredate LIKE '%{str(search_info.start_date.date())}%' AND
-                            returndate LIKE '%{str(search_info.end_date.date())}%' AND
-                            countadults = '{search_info.adults}' AND
-                            countchildren = '{search_info.kids}' AND 
-                            hotelid = '{search_info.offers[search_info.current_offer].hotelid}';"""
+        flight_from = self.format_airports(search_info.flight_from)
+        flight_to = self.format_airports(search_info.flight_to)
+        query = f"""SELECT * FROM offers2 INNER JOIN hotels ON hotels.id = offers2.hotelid WHERE
+                            outbounddepartureairport IN {flight_from} AND
+                            outboundarrivalairport IN {flight_to} AND
+                            departuredate = '{str(search_info.start_date.date())}' AND
+                            returndate = '{str(search_info.end_date.date())}' AND
+                            countadults = {int(search_info.adults)} AND
+                            countchildren = {int(search_info.kids)} AND 
+                            hotelid = {search_info.offers[search_info.current_offer].hotelid};"""
         self.cur.execute(query)
         return self.cur.fetchall()
 

@@ -27,6 +27,7 @@ class Offer:
 
     def __str__(self):
         str = f"🏨 {self.hotel.name} {self.hotelid} with {self.hotel.category_stars} ⭐ \n" \
+              f"✈️ {self.departuredate.strftime('%m/%d/%Y')} - {self.returndate.strftime('%m/%d/%Y')}" \
               f"💶 {self.price} EUR \n" \
               f"🛏️ Type of room is {self.roomtype} \n"
         if self.oceanview == "true":
@@ -36,9 +37,6 @@ class Offer:
         elif self.mealtype == "breakfast":
             str += "🥐 Only breakfast \n"
         return str
-    #
-    # def __repr__(self):
-    #     return str(self)
 
     def set_hotel(self, hotel):
         self.hotel = hotel

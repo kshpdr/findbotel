@@ -11,19 +11,35 @@ from handlers.Processor import Processor
 from utils.Database import Database
 from utils.MarkupGenerator import MarkupGenerator
 from models.SearchInfo import SearchInfo
+from models.User import User
 
 bot = telebot.TeleBot(config.telegram_token)
-
-journey_to_find = SearchInfo()
 database = Database(config.DATABASE_URL)
-markup_generator = MarkupGenerator()
+users = {}
 
-processor = Processor(bot, journey_to_find, database, markup_generator)
-handler = Handler(journey_to_find, database, markup_generator, processor)
+
+processor = Processor(bot, database)
+handler = Handler(database, processor)
+
+
+@bot.message_handler(commands=['start'])
+def start_command(message):
+    users[message.from_user.id] = User(message.from_user.id, SearchInfo(), MarkupGenerator())
+    processor.users = users
+    handler.users = users
+    print(users)
+
+    msg = bot.reply_to(message, "Let's start new search! Simply type your answer, "
+                                "by multiple options just separate them with commas, "
+                                "or choose ones from the list. \n \n"
+                                "What is a *departure airport(s)*? \n"
+                                "e.g. 'Berlin,Frankfurt'",
+                       parse_mode="Markdown",
+                       reply_markup=users[message.from_user.id].markup_generator.generate_markup_from_word("List of airports", "departureairports"))
+    bot.register_next_step_handler(msg, processor.process_flight_from)
 
 
 def register_handlers():
-    bot.register_message_handler(processor.start_command, commands=['start'])
     bot.register_callback_query_handler(handler.show_departure_airports, lambda call: call.data =='departureairports', pass_bot=True)
     bot.register_callback_query_handler(handler.show_arrival_airports, lambda call: call.data == 'arrivalairports', pass_bot=True)
     bot.register_callback_query_handler(handler.ready_with_departure_airports, lambda call: call.data == 'departure_ready', pass_bot=True)
@@ -36,6 +52,7 @@ def register_handlers():
     bot.register_callback_query_handler(handler.show_next_hotel, lambda call: call.data =='next', pass_bot=True)
     bot.register_callback_query_handler(handler.start_payment, lambda call: call.data == 'pay', pass_bot=True)
     bot.register_callback_query_handler(handler.send_location, lambda call: call.data == 'maps', pass_bot=True)
+    bot.register_callback_query_handler(handler.show_all_offers_for_hotel, lambda call: call.data == 'all_offers', pass_bot=True)
 
 
 register_handlers()

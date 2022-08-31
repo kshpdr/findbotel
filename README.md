@@ -7,6 +7,8 @@ of August in some gaps between my exams at the university. This bot is written i
 charge me too much) and a bot itself is deployed on a Heroku platform. For the libraries, I have used psycopg for the databse connection, flask for the server 
 implementation and pyTelegramBotAPI to make use of Telegram Bot API.
 
+You can try it out online at https://t.me/findbotelbot
+
 ## What was implemented
 
 - A basic search of a journey for given dates, places and amount of people

@@ -27,7 +27,7 @@ class Offer:
 
     def __str__(self):
         str = f"🏨 {self.hotel.name} {self.hotelid} with {self.hotel.category_stars} ⭐ \n" \
-              f"✈️ {self.departuredate.strftime('%m/%d/%Y')} - {self.returndate.strftime('%m/%d/%Y')}" \
+              f"✈️ {self.departuredate.strftime('%m/%d/%Y')} - {self.returndate.strftime('%m/%d/%Y')} \n" \
               f"💶 {self.price} EUR \n" \
               f"🛏️ Type of room is {self.roomtype} \n"
         if self.oceanview == "true":

@@ -1,5 +1,7 @@
 # findbotel - find a journey of your dream
 
+Bot is currently disabled due to the privacy concerns since the challenge is already over.
+
 ![](https://raw.githubusercontent.com/kshpdr/findbotel/main/media/findbotel_word.png "Logo findbotel")
 
 This is a coding project made for a [Check24 coding challenge](https://github.com/check24-scholarships/holiday-challenge) that I've been writting for the last two week

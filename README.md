@@ -1,6 +1,6 @@
 # findbotel - find a journey of your dream
 
-Bot is currently disabled due to the privacy concerns since the challenge is already over.
+_The bot is currently disabled due to privacy concerns, as the challenge has already concluded_
 
 ![](https://raw.githubusercontent.com/kshpdr/findbotel/main/media/findbotel_word.png "Logo findbotel")
 
